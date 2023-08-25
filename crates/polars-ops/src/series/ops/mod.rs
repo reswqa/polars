@@ -25,6 +25,7 @@ mod search_sorted;
 #[cfg(feature = "to_dummies")]
 mod to_dummies;
 mod various;
+mod bit;
 
 pub use approx_algo::*;
 #[cfg(feature = "approx_unique")]
@@ -54,6 +55,7 @@ pub use search_sorted::*;
 #[cfg(feature = "to_dummies")]
 pub use to_dummies::*;
 pub use various::*;
+pub use bit::*;
 
 pub trait SeriesSealed {
     fn as_series(&self) -> &Series;
