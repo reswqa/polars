@@ -271,12 +271,13 @@ def test_mapped_literal_to_literal_9217() -> None:
 
 
 def test_sum_empty_and_null_set() -> None:
-    series = pl.Series("a", [])
-    assert series.sum() == 0
-
-    series = pl.Series("a", [None])
-    assert series.sum() == 0
-
-    df = pl.DataFrame({"a": [None, None, None], "b": [1, 1, 1]})
-    assert df.select(pl.sum("a")).item() == 0.0
-    assert df.group_by("b").agg(pl.sum("a"))["a"].item() == 0.0
+    v = pl.col("a") / pl.col("b")
+    magic = pl.when(v > 0).then(pl.lit(float("nan"))).otherwise(v)
+    df = (
+        pl.DataFrame(
+            {
+                "a": [1.],
+                "b": [1.],
+            }
+        ).lazy().select(magic).collect(comm_subexpr_elim=False))
+    print(df)

@@ -1,0 +1,30 @@
+thread 'rustc' panicked at 'assertion failed: pos.get() <= self.position()', compiler/rustc_metadata/src/rmeta/encoder.rs:441:9
+stack backtrace:
+   0:        0x10179fe93 - <std::sys_common::backtrace::_print::DisplayBacktrace as core::fmt::Display>::fmt::he91251c3d6dffb0d
+   1:        0x1017ffe8b - core::fmt::write::h3854d30ed992b365
+   2:        0x10179462e - std::io::Write::write_fmt::h9df99228a9e89da1
+   3:        0x10179fc8a - std::sys_common::backtrace::print::h3e674ac0b4696338
+   4:        0x1017a3238 - std::panicking::panic_hook_with_disk_dump::{{closure}}::h685d207c49c4efdf
+   5:        0x1017a2dc7 - std::panicking::panic_hook_with_disk_dump::h175d4e8089a13d5c
+   6:        0x10b0f9d01 - rustc_driver_impl[bc4bf1f44e1da653]::install_ice_hook::{closure#0}
+   7:        0x1017a3a70 - std::panicking::rust_panic_with_hook::h539dbd6db76e3f1c
+   8:        0x1017a37d2 - std::panicking::begin_panic_handler::{{closure}}::hdee3ece506660064
+   9:        0x1017a0299 - std::sys_common::backtrace::__rust_end_short_backtrace::h72b9bbabb3e6cba8
+  10:        0x1017a354d - _rust_begin_unwind
+  11:        0x10182b133 - core::panicking::panic_fmt::h73a582246251c458
+  12:        0x10182b1c7 - core::panicking::panic::hc50acb3d53be6980
+  13:        0x10ba923c9 - <rustc_metadata[7d9245673ce902e3]::rmeta::encoder::EncodeContext>::encode_crate_root
+  14:        0x10ba9996f - rustc_metadata[7d9245673ce902e3]::rmeta::encoder::encode_metadata_impl
+  15:        0x10bb3c714 - rustc_data_structures[ed43495f5800a6af]::sync::join::<rustc_metadata[7d9245673ce902e3]::rmeta::encoder::encode_metadata::{closure#0}, rustc_metadata[7d9245673ce902e3]::rmeta::encoder::encode_metadata::{closure#1}, (), ()>
+  16:        0x10ba989d5 - rustc_metadata[7d9245673ce902e3]::rmeta::encoder::encode_metadata
+  17:        0x10bb18e57 - rustc_metadata[7d9245673ce902e3]::fs::encode_and_write_metadata
+  18:        0x10b948728 - rustc_interface[e62ab03055db47f2]::passes::start_codegen
+  19:        0x10b9269ed - <rustc_middle[aa830a550239e8]::ty::context::GlobalCtxt>::enter::<<rustc_interface[e62ab03055db47f2]::queries::Queries>::ongoing_codegen::{closure#0}, core[1f2a81cacb818bb2]::result::Result<alloc[b84545aa0564e5b6]::boxed::Box<dyn core[1f2a81cacb818bb2]::any::Any>, rustc_span[587be24079c51a01]::ErrorGuaranteed>>
+  20:        0x10b9222a8 - <rustc_interface[e62ab03055db47f2]::queries::Queries>::ongoing_codegen
+  21:        0x10b115dc6 - <rustc_interface[e62ab03055db47f2]::interface::Compiler>::enter::<rustc_driver_impl[bc4bf1f44e1da653]::run_compiler::{closure#1}::{closure#2}, core[1f2a81cacb818bb2]::result::Result<core[1f2a81cacb818bb2]::option::Option<rustc_interface[e62ab03055db47f2]::queries::Linker>, rustc_span[587be24079c51a01]::ErrorGuaranteed>>
+  22:        0x10b14503d - std[a2831f447c33ca68]::sys_common::backtrace::__rust_begin_short_backtrace::<rustc_interface[e62ab03055db47f2]::util::run_in_thread_pool_with_globals<rustc_interface[e62ab03055db47f2]::interface::run_compiler<core[1f2a81cacb818bb2]::result::Result<(), rustc_span[587be24079c51a01]::ErrorGuaranteed>, rustc_driver_impl[bc4bf1f44e1da653]::run_compiler::{closure#1}>::{closure#0}, core[1f2a81cacb818bb2]::result::Result<(), rustc_span[587be24079c51a01]::ErrorGuaranteed>>::{closure#0}::{closure#0}, core[1f2a81cacb818bb2]::result::Result<(), rustc_span[587be24079c51a01]::ErrorGuaranteed>>
+  23:        0x10b146d1e - <<std[a2831f447c33ca68]::thread::Builder>::spawn_unchecked_<rustc_interface[e62ab03055db47f2]::util::run_in_thread_pool_with_globals<rustc_interface[e62ab03055db47f2]::interface::run_compiler<core[1f2a81cacb818bb2]::result::Result<(), rustc_span[587be24079c51a01]::ErrorGuaranteed>, rustc_driver_impl[bc4bf1f44e1da653]::run_compiler::{closure#1}>::{closure#0}, core[1f2a81cacb818bb2]::result::Result<(), rustc_span[587be24079c51a01]::ErrorGuaranteed>>::{closure#0}::{closure#0}, core[1f2a81cacb818bb2]::result::Result<(), rustc_span[587be24079c51a01]::ErrorGuaranteed>>::{closure#1} as core[1f2a81cacb818bb2]::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}
+  24:        0x1017ad4a9 - std::sys::
+
+query stack during panic:
+end of query stack

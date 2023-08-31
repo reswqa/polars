@@ -396,7 +396,7 @@ impl Visitor for ExprIdentifierVisitor<'_> {
         // is available for the parent expression
         self.visit_stack
             .push(VisitRecord::SubExprId(id.clone(), true));
-
+        dbg!(&id);
         let (_, se_count) = self.se_count.entry(id).or_insert_with(|| (node.node(), 0));
 
         *se_count += 1;
@@ -492,7 +492,7 @@ impl RewritingVisitor for CommonSubExprRewriter<'_> {
         }
 
         let id = &self.identifier_array[self.visited_idx + self.id_array_offset].1;
-
+        dbg!(&id);
         // placeholder not overwritten, so we can skip this sub-expression
         if !id.is_valid() {
             self.visited_idx += 1;
@@ -506,6 +506,8 @@ impl RewritingVisitor for CommonSubExprRewriter<'_> {
             return Ok(recurse);
         }
 
+        dbg!(self.sub_expr_map);
+        dbg!(&id);
         let (_, count) = self.sub_expr_map.get(id).unwrap();
         if *count > 1 {
             self.replaced_identifiers.insert(id.clone());
