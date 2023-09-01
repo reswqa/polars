@@ -1,3 +1,4 @@
+use crate::series::implementations::null::NullChunked;
 use super::*;
 
 pub struct ListNullChunkedBuilder {
@@ -12,12 +13,19 @@ impl ListNullChunkedBuilder {
             name: name.into(),
         }
     }
+
+    pub(crate) fn append(&mut self, s: &Series) {
+        let value_builder = self.builder.mut_values();
+        dbg!(s.len());
+        value_builder.extend_nulls(s.len());
+        self.builder.try_push_valid().unwrap();
+    }
 }
 
 impl ListBuilderTrait for ListNullChunkedBuilder {
     #[inline]
-    fn append_series(&mut self, _s: &Series) -> PolarsResult<()> {
-        self.builder.push_null();
+    fn append_series(&mut self, s: &Series) -> PolarsResult<()> {
+        self.append(s);
         Ok(())
     }
 

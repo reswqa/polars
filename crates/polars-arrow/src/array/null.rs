@@ -23,6 +23,7 @@ impl MutableArray for MutableNullArray {
     }
 
     fn as_box(&mut self) -> Box<dyn Array> {
+        dbg!(self.len);
         Box::new(NullArray::new_null(DataType::Null, self.len))
     }
 
@@ -35,6 +36,7 @@ impl MutableArray for MutableNullArray {
     }
 
     fn push_null(&mut self) {
+        dbg!("push null");
         self.len += 1;
     }
 
@@ -44,5 +46,12 @@ impl MutableArray for MutableNullArray {
 
     fn shrink_to_fit(&mut self) {
         // no-op
+    }
+}
+
+impl MutableNullArray {
+    pub fn extend_nulls(&mut self, null_count: usize){
+        dbg!(null_count);
+        self.len += null_count;
     }
 }

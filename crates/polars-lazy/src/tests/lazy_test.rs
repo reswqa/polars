@@ -181,15 +181,11 @@ fn test_is_first() -> PolarsResult<()> {
 
 #[test]
 fn test_empty() -> PolarsResult<()> {
-    let v = col("a").div(col("b"));
-    let magic = when(v.clone().gt(lit(0))).then(lit(f32::NAN)).otherwise(v);
-    let df =
-        df![
-                "a" => [1.],
-                "b" => [1.],
-            ]?
-        .lazy().select([magic]);
-    let res = df.with_comm_subexpr_elim(true).collect()?;
-    dbg!(&res);
+    let non_slice: &[Option<i32>] = &[None, Some(1),Some(2)];
+    let s1 = Series::new_null("a", 2);
+    let non_slice_2: &[Option<i32>] = &[None, None];
+    let s2 = Series::new_null("b", 1);
+    let s = Series::new("c", [s1, s2]);
+    dbg!(&s);
     Ok(())
 }

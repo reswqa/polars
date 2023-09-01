@@ -177,6 +177,7 @@ impl PySeries {
                     DataType::Null => {
                         let null: Option<u8> = None;
                         let n = series.len();
+                        dbg!(n);
                         let iter = std::iter::repeat(null).take(n);
                         use std::iter::{Repeat, Take};
                         struct NullIter {
