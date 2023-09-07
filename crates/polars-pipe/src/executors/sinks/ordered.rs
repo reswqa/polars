@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::any::{Any, TypeId};
 
 use polars_core::error::PolarsResult;
 use polars_core::frame::DataFrame;
@@ -57,6 +57,7 @@ impl Sink for OrderedSink {
         Ok(FinalizedSink::Finished(chunks_to_df_unchecked(chunks)))
     }
     fn as_any(&mut self) -> &mut dyn Any {
+        dbg!(self.clone().type_id());
         self
     }
     fn fmt(&self) -> &str {

@@ -13,6 +13,7 @@ mod queries;
 mod streaming;
 #[cfg(all(feature = "strings", feature = "cse"))]
 mod tpch;
+mod lazy_test;
 
 fn get_arenas() -> (Arena<AExpr>, Arena<ALogicalPlan>) {
     let expr_arena = Arena::with_capacity(16);

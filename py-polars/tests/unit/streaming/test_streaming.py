@@ -112,6 +112,24 @@ def test_streaming_literal_expansion() -> None:
     }
 
 
+def test_concat() -> None:
+    df_1 = pl.DataFrame(
+    {
+        "a": [22, 1, 1],
+        "b": [500, 37, 20],
+    },
+    ).lazy()
+
+    df_2 = pl.DataFrame(
+        {
+            "a": [22, 1, 1],
+            "b": [500, 37, 20],
+        },
+    ).lazy()
+
+    out = pl.concat([df_1, df_2])
+    out.collect(streaming=True)
+
 def test_tree_validation_streaming() -> None:
     # this query leads to a tree collection with an invalid branch
     # this test triggers the tree validation function.
@@ -314,3 +332,20 @@ def test_boolean_agg_schema() -> None:
             == agg_df.schema
             == {"x": pl.Int64, "max_y": pl.Boolean}
         )
+
+
+def test_join_empty() -> None:
+    data_1 = pl.DataFrame({"A": [1], "B": [11]}).lazy()
+    data_2 = pl.DataFrame({"A": [2], "B": [22]}).lazy()
+
+    query = pl.DataFrame({"A": [3]}).lazy()
+
+    empty_join_1 = query.join(data_1, on="A")
+    empty_join_2 = query.join(data_2, on="A")
+
+    empty_concat = pl.concat([empty_join_1, empty_join_2])
+
+    empty_concat.collect(streaming=False)
+    # => OK
+
+    empty_concat.collect(streaming=True)

@@ -1,3 +1,4 @@
+use std::any::{Any, TypeId};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::fmt::{Debug, Formatter};
@@ -11,6 +12,7 @@ use polars_core::POOL;
 use polars_utils::arena::Node;
 use polars_utils::sync::SyncPtr;
 use rayon::prelude::*;
+use crate::executors::sinks::{GenericBuild, OrderedSink};
 
 use crate::executors::sources::DataFrameSource;
 use crate::operators::{
@@ -99,12 +101,15 @@ impl PipeLine {
         // we don't use the power of two partition size here
         // we only do that in the sinks itself.
         let n_threads = morsels_per_sink();
-
+        println!("orderSink {:?}", TypeId::of::<OrderedSink>());
+        println!("JoinSink {:?}", TypeId::of::<GenericBuild>());
         // We split so that every thread gets an operator
         let sink_nodes = sink_and_nodes.iter().map(|(_, node, _, _)| *node).collect();
+        dbg!(sink_and_nodes.len());
         let sinks = sink_and_nodes
             .into_iter()
             .map(|(offset, _, sink, shared_count)| {
+                dbg!(sink.type_id());
                 (
                     offset,
                     shared_count,
@@ -344,10 +349,11 @@ impl PipeLine {
         // however if the sink is finished early, (for instance a `head`)
         // we don't want to run the rest of the pipelines and we finalize early
         let mut sink_finished = false;
-
+        dbg!(self.sinks.len());
         for (i, (operator_end, shared_count, mut sink)) in
             std::mem::take(&mut self.sinks).into_iter().enumerate()
         {
+            dbg!(sink.len());
             for src in &mut std::mem::take(&mut self.sources) {
                 let mut next_batches = src.get_batches(ec)?;
 
