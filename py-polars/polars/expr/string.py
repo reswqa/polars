@@ -1356,7 +1356,7 @@ class ExprStringNameSpace:
         """
         return wrap_expr(self._pyexpr.str_extract_groups(pattern))
 
-    def count_match(self, pattern: str | Expr) -> Expr:
+    def count_match(self, pattern: str | Expr, literal: bool = False) -> Expr:
         r"""
         Count all successive non-overlapping regex matches.
 
@@ -1365,6 +1365,8 @@ class ExprStringNameSpace:
         pattern
             A valid regular expression pattern, compatible with the `regex crate
             <https://docs.rs/regex/latest/regex/>`_.
+        literal
+            Treat ``pattern`` as a literal string, not as a regular expression.
 
         Returns
         -------
@@ -1390,9 +1392,27 @@ class ExprStringNameSpace:
         │ null         │
         └──────────────┘
 
+        >>> df = pl.DataFrame({"bar": ["12 dbc 3xy", "cat\\w", "1zy3\\d\\d", None]})
+        >>> df.select(
+        ...     pl.col("bar")
+        ...     .str.count_match(r"\d", literal=True)
+        ...     .alias("count_digits"),
+        ... )
+        shape: (4, 1)
+        ┌──────────────┐
+        │ count_digits │
+        │ ---          │
+        │ u32          │
+        ╞══════════════╡
+        │ 0            │
+        │ 0            │
+        │ 2            │
+        │ null         │
+        └──────────────┘
+
         """
         pattern = parse_as_expression(pattern, str_as_lit=True)
-        return wrap_expr(self._pyexpr.str_count_match(pattern))
+        return wrap_expr(self._pyexpr.str_count_match(pattern, literal))
 
     def split(self, by: str, *, inclusive: bool = False) -> Expr:
         """

@@ -26,7 +26,7 @@ pub enum StringFunction {
         literal: bool,
         strict: bool,
     },
-    CountMatch,
+    CountMatch(bool),
     EndsWith,
     Explode,
     Extract {
@@ -90,7 +90,7 @@ impl StringFunction {
             ConcatVertical(_) | ConcatHorizontal(_) => mapper.with_same_dtype(),
             #[cfg(feature = "regex")]
             Contains { .. } => mapper.with_dtype(DataType::Boolean),
-            CountMatch => mapper.with_dtype(DataType::UInt32),
+            CountMatch(_) => mapper.with_dtype(DataType::UInt32),
             EndsWith | StartsWith => mapper.with_dtype(DataType::Boolean),
             Explode => mapper.with_same_dtype(),
             Extract { .. } => mapper.with_same_dtype(),
@@ -125,7 +125,7 @@ impl Display for StringFunction {
         let s = match self {
             #[cfg(feature = "regex")]
             StringFunction::Contains { .. } => "contains",
-            StringFunction::CountMatch => "count_match",
+            StringFunction::CountMatch(_) => "count_match",
             StringFunction::EndsWith { .. } => "ends_with",
             StringFunction::Extract { .. } => "extract",
             #[cfg(feature = "concat_str")]
@@ -410,7 +410,7 @@ pub(super) fn extract_all(args: &[Series]) -> PolarsResult<Series> {
     }
 }
 
-pub(super) fn count_match(args: &[Series]) -> PolarsResult<Series> {
+pub(super) fn count_match(args: &[Series], literal: bool) -> PolarsResult<Series> {
     let s = &args[0];
     let pat = &args[1];
 
@@ -418,12 +418,12 @@ pub(super) fn count_match(args: &[Series]) -> PolarsResult<Series> {
     let pat = pat.utf8()?;
     if pat.len() == 1 {
         if let Some(pat) = pat.get(0) {
-            ca.count_match(pat).map(|ca| ca.into_series())
+            ca.count_match(pat, literal).map(|ca| ca.into_series())
         } else {
             Ok(Series::full_null(ca.name(), ca.len(), &DataType::UInt32))
         }
     } else {
-        ca.count_match_many(pat).map(|ca| ca.into_series())
+        ca.count_match_many(pat, literal).map(|ca| ca.into_series())
     }
 }
 
