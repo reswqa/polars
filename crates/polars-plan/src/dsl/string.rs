@@ -214,7 +214,7 @@ impl StringNameSpace {
     }
 
     /// Split the string by a substring. The resulting dtype is `List<Utf8>`.
-    pub fn split(self, by: &str) -> Expr {
+    pub fn split(self, by: Expr) -> Expr {
         let by = by.to_string();
 
         let function = move |s: Series| {
@@ -230,8 +230,9 @@ impl StringNameSpace {
             });
             Ok(Some(builder.finish().into_series()))
         };
+        self.0.map_private()
         self.0
-            .map(
+            .map_many(
                 function,
                 GetOutput::from_type(DataType::List(Box::new(DataType::Utf8))),
             )
@@ -239,7 +240,7 @@ impl StringNameSpace {
     }
 
     /// Split the string by a substring and keep the substring. The resulting dtype is `List<Utf8>`.
-    pub fn split_inclusive(self, by: &str) -> Expr {
+    pub fn split_inclusive(self, by: Expr) -> Expr {
         let by = by.to_string();
 
         let function = move |s: Series| {
