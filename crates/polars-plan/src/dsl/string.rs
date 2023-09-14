@@ -215,8 +215,6 @@ impl StringNameSpace {
 
     /// Split the string by a substring. The resulting dtype is `List<Utf8>`.
     pub fn split(self, by: Expr) -> Expr {
-        let by = by.to_string();
-
         let function = move |s: Series| {
             let ca = s.utf8()?;
 
@@ -230,19 +228,14 @@ impl StringNameSpace {
             });
             Ok(Some(builder.finish().into_series()))
         };
-        self.0.map_private()
-        self.0
-            .map_many(
-                function,
-                GetOutput::from_type(DataType::List(Box::new(DataType::Utf8))),
-            )
-            .with_fmt("str.split")
+
+        self.0.map_many_private(StringFunction::Split(false).into(),
+                                &[by],
+                                false)
     }
 
     /// Split the string by a substring and keep the substring. The resulting dtype is `List<Utf8>`.
     pub fn split_inclusive(self, by: Expr) -> Expr {
-        let by = by.to_string();
-
         let function = move |s: Series| {
             let ca = s.utf8()?;
 
@@ -256,12 +249,9 @@ impl StringNameSpace {
             });
             Ok(Some(builder.finish().into_series()))
         };
-        self.0
-            .map(
-                function,
-                GetOutput::from_type(DataType::List(Box::new(DataType::Utf8))),
-            )
-            .with_fmt("str.split_inclusive")
+        self.0.map_many_private(StringFunction::Split(true).into(),
+                                &[by],
+                                false)
     }
 
     #[cfg(feature = "dtype-struct")]

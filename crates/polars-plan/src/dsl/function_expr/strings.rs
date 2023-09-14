@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use arrow::compute::arithmetics::decimal::sub;
 
 #[cfg(feature = "timezones")]
 use once_cell::sync::Lazy;
@@ -75,6 +76,7 @@ pub enum StringFunction {
     StripSuffix(String),
     #[cfg(feature = "temporal")]
     Strptime(DataType, StrptimeOptions),
+    Split(bool),
     #[cfg(feature = "dtype-decimal")]
     ToDecimal(usize),
     #[cfg(feature = "nightly")]
@@ -109,6 +111,7 @@ impl StringFunction {
             Replace { .. } => mapper.with_same_dtype(),
             #[cfg(feature = "temporal")]
             Strptime(dtype, _) => mapper.with_dtype(dtype.clone()),
+            Split(_) => mapper.with_dtype(DataType::List(Box::new(DataType::Utf8))),
             #[cfg(feature = "nightly")]
             Titlecase => mapper.with_same_dtype(),
             #[cfg(feature = "dtype-decimal")]
@@ -165,6 +168,13 @@ impl Display for StringFunction {
             StringFunction::StripSuffix(_) => "strip_suffix",
             #[cfg(feature = "temporal")]
             StringFunction::Strptime(_, _) => "strptime",
+            StringFunction::Split(inclusive) => {
+                if inclusive{
+                    "split_inclusive"
+                }else{
+                    "split"
+                }
+            }
             #[cfg(feature = "nightly")]
             StringFunction::Titlecase => "titlecase",
             #[cfg(feature = "dtype-decimal")]
@@ -439,6 +449,21 @@ pub(super) fn strptime(
         DataType::Time => to_time(&s[0], options),
         dt => polars_bail!(ComputeError: "not implemented for dtype {}", dt),
     }
+}
+
+pub(super) fn split(s: &[Series], inclusive: bool) -> PolarsResult<Series> {
+        let ca = s[0].utf8()?;
+        let by = s[1].utf8()?;
+
+        let mut builder = ListUtf8ChunkedBuilder::new(ca.name(), ca.len(), ca.get_values_size());
+        ca.into_iter().for_each(|opt_s| match opt_s {
+            None => builder.append_null(),
+            Some(s) => {
+                let iter = s.split_inclusive(&by);
+                builder.append_values_iter(iter);
+            },
+        });
+        Ok(Some(builder.finish().into_series()))
 }
 
 fn handle_temporal_parsing_error(

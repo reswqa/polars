@@ -680,6 +680,9 @@ impl From<StringFunction> for SpecialEq<Arc<dyn SeriesUdf>> {
             Strptime(dtype, options) => {
                 map_as_slice!(strings::strptime, dtype.clone(), &options)
             },
+            Split(inclusive) => {
+                map_as_slice!(strings::split(inclusive))
+            },
             #[cfg(feature = "concat_str")]
             ConcatVertical(delimiter) => map!(strings::concat, &delimiter),
             #[cfg(feature = "concat_str")]

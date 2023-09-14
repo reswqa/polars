@@ -8,7 +8,7 @@ use polars_arrow::kernels::string::*;
 #[cfg(feature = "string_from_radix")]
 use polars_core::export::num::Num;
 use polars_core::export::regex::Regex;
-use polars_core::prelude::arity::try_binary_elementwise;
+use polars_core::prelude::arity::{binary_elementwise, try_binary_elementwise};
 use polars_utils::cache::FastFixedCache;
 use regex::escape;
 
@@ -309,6 +309,28 @@ pub trait Utf8NameSpaceImpl: AsUtf8 {
             }
         }
         Ok(builder.finish())
+    }
+
+    fn split_all_many(&self, by: &Utf8Chunked, inclusive: bool) -> ListChunked{
+        let ca = self.as_utf8();
+        polars_ensure!(
+            ca.len() == by.len(),
+            ComputeError: "by's length: {} does not match that of the argument series: {}",
+            by.len(), ca.len(),
+        );
+        binary_elementwise()
+        let mut builder = ListUtf8ChunkedBuilder::new(ca.name(), ca.len(), ca.get_values_size());
+        ca.downcast_iter().for_each(|arr| {
+            arr.iter().for_each(|opt_s| match opt_s {
+                None => builder.append_null(),
+                Some(s) => {
+                    let iter = s.split(&by);
+                    builder.append_values_iter(iter);
+                },
+            })
+        });
+
+        builder.finish()
     }
 
     /// Extract each successive non-overlapping regex match in an individual string as an array.
