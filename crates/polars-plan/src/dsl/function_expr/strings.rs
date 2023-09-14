@@ -455,14 +455,16 @@ pub(super) fn split(s: &[Series], inclusive: bool) -> PolarsResult<Series> {
         let ca = s[0].utf8()?;
         let by = s[1].utf8()?;
 
-        let mut builder = ListUtf8ChunkedBuilder::new(ca.name(), ca.len(), ca.get_values_size());
-        ca.into_iter().for_each(|opt_s| match opt_s {
-            None => builder.append_null(),
-            Some(s) => {
-                let iter = s.split_inclusive(&by);
-                builder.append_values_iter(iter);
-            },
-        });
+    if pat.len() == 1 {
+        if let Some(pat) = pat.get(0) {
+            ca.count_matches(pat, literal).map(|ca| ca.into_series())
+        } else {
+            Ok(Series::full_null(ca.name(), ca.len(), &DataType::UInt32))
+        }
+    } else {
+        ca.count_matches_many(pat, literal)
+            .map(|ca| ca.into_series())
+    }
         Ok(Some(builder.finish().into_series()))
 }
 

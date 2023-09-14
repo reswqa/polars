@@ -8,7 +8,7 @@ use polars_arrow::kernels::string::*;
 #[cfg(feature = "string_from_radix")]
 use polars_core::export::num::Num;
 use polars_core::export::regex::Regex;
-use polars_core::prelude::arity::{binary_elementwise, try_binary_elementwise};
+use polars_core::prelude::arity::{binary_elementwise_for_each, try_binary_elementwise};
 use polars_utils::cache::FastFixedCache;
 use regex::escape;
 
@@ -318,16 +318,17 @@ pub trait Utf8NameSpaceImpl: AsUtf8 {
             ComputeError: "by's length: {} does not match that of the argument series: {}",
             by.len(), ca.len(),
         );
-        binary_elementwise()
+
         let mut builder = ListUtf8ChunkedBuilder::new(ca.name(), ca.len(), ca.get_values_size());
-        ca.downcast_iter().for_each(|arr| {
-            arr.iter().for_each(|opt_s| match opt_s {
-                None => builder.append_null(),
-                Some(s) => {
+
+        binary_elementwise_for_each(ca, by, |opt_s, opt_by|{
+            match (opt_s, opt_by) {
+                (Some(s), Some(by)) => {
                     let iter = s.split(&by);
                     builder.append_values_iter(iter);
                 },
-            })
+                _ => builder.append_null()
+            }
         });
 
         builder.finish()

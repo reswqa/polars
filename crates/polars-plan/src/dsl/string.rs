@@ -215,20 +215,6 @@ impl StringNameSpace {
 
     /// Split the string by a substring. The resulting dtype is `List<Utf8>`.
     pub fn split(self, by: Expr) -> Expr {
-        let function = move |s: Series| {
-            let ca = s.utf8()?;
-
-            let mut builder = ListUtf8ChunkedBuilder::new(s.name(), s.len(), ca.get_values_size());
-            ca.into_iter().for_each(|opt_s| match opt_s {
-                None => builder.append_null(),
-                Some(s) => {
-                    let iter = s.split(&by);
-                    builder.append_values_iter(iter);
-                },
-            });
-            Ok(Some(builder.finish().into_series()))
-        };
-
         self.0.map_many_private(StringFunction::Split(false).into(),
                                 &[by],
                                 false)
@@ -236,19 +222,6 @@ impl StringNameSpace {
 
     /// Split the string by a substring and keep the substring. The resulting dtype is `List<Utf8>`.
     pub fn split_inclusive(self, by: Expr) -> Expr {
-        let function = move |s: Series| {
-            let ca = s.utf8()?;
-
-            let mut builder = ListUtf8ChunkedBuilder::new(s.name(), s.len(), ca.get_values_size());
-            ca.into_iter().for_each(|opt_s| match opt_s {
-                None => builder.append_null(),
-                Some(s) => {
-                    let iter = s.split_inclusive(&by);
-                    builder.append_values_iter(iter);
-                },
-            });
-            Ok(Some(builder.finish().into_series()))
-        };
         self.0.map_many_private(StringFunction::Split(true).into(),
                                 &[by],
                                 false)
