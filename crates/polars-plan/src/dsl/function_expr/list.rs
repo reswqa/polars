@@ -63,101 +63,13 @@ pub(super) fn contains(args: &mut [Series]) -> PolarsResult<Option<Series>> {
     })
 }
 
-fn check_slice_arg_shape(slice_len: usize, ca_len: usize, name: &str) -> PolarsResult<()> {
-    polars_ensure!(
-        slice_len == ca_len,
-        ComputeError:
-        "shape of the slice '{}' argument: {} does not match that of the list column: {}",
-        name, slice_len, ca_len
-    );
-    Ok(())
-}
-
 pub(super) fn slice(args: &mut [Series]) -> PolarsResult<Option<Series>> {
     let s = &args[0];
     let list_ca = s.list()?;
     let offset_s = &args[1];
     let length_s = &args[2];
 
-    let mut out: ListChunked = match (offset_s.len(), length_s.len()) {
-        (1, 1) => {
-            let offset = offset_s.get(0).unwrap().try_extract::<i64>()?;
-            let slice_len = length_s
-                .get(0)
-                .unwrap()
-                .extract::<usize>()
-                .unwrap_or(usize::MAX);
-            return Ok(Some(list_ca.lst_slice(offset, slice_len).into_series()));
-        },
-        (1, length_slice_len) => {
-            check_slice_arg_shape(length_slice_len, list_ca.len(), "length")?;
-            let offset = offset_s.get(0).unwrap().try_extract::<i64>()?;
-            // cast to i64 as it is more likely that it is that dtype
-            // instead of usize/u64 (we never need that max length)
-            let length_ca = length_s.cast(&DataType::Int64)?;
-            let length_ca = length_ca.i64().unwrap();
 
-            // SAFETY: unstable series never lives longer than the iterator.
-            unsafe {
-                list_ca
-                    .amortized_iter()
-                    .zip(length_ca)
-                    .map(|(opt_s, opt_length)| match (opt_s, opt_length) {
-                        (Some(s), Some(length)) => Some(s.as_ref().slice(offset, length as usize)),
-                        _ => None,
-                    })
-                    .collect_trusted()
-            }
-        },
-        (offset_len, 1) => {
-            check_slice_arg_shape(offset_len, list_ca.len(), "offset")?;
-            let length_slice = length_s
-                .get(0)
-                .unwrap()
-                .extract::<usize>()
-                .unwrap_or(usize::MAX);
-            let offset_ca = offset_s.cast(&DataType::Int64)?;
-            let offset_ca = offset_ca.i64().unwrap();
-            // SAFETY: unstable series never lives longer than the iterator.
-            unsafe {
-                list_ca
-                    .amortized_iter()
-                    .zip(offset_ca)
-                    .map(|(opt_s, opt_offset)| match (opt_s, opt_offset) {
-                        (Some(s), Some(offset)) => Some(s.as_ref().slice(offset, length_slice)),
-                        _ => None,
-                    })
-                    .collect_trusted()
-            }
-        },
-        _ => {
-            check_slice_arg_shape(offset_s.len(), list_ca.len(), "offset")?;
-            check_slice_arg_shape(length_s.len(), list_ca.len(), "length")?;
-            let offset_ca = offset_s.cast(&DataType::Int64)?;
-            let offset_ca = offset_ca.i64()?;
-            // cast to i64 as it is more likely that it is that dtype
-            // instead of usize/u64 (we never need that max length)
-            let length_ca = length_s.cast(&DataType::Int64)?;
-            let length_ca = length_ca.i64().unwrap();
-
-            // SAFETY: unstable series never lives longer than the iterator.
-            unsafe {
-                list_ca
-                    .amortized_iter()
-                    .zip(offset_ca)
-                    .zip(length_ca)
-                    .map(|((opt_s, opt_offset), opt_length)| {
-                        match (opt_s, opt_offset, opt_length) {
-                            (Some(s), Some(offset), Some(length)) => {
-                                Some(s.as_ref().slice(offset, length as usize))
-                            },
-                            _ => None,
-                        }
-                    })
-                    .collect_trusted()
-            }
-        },
-    };
     out.rename(s.name());
     Ok(Some(out.into_series()))
 }

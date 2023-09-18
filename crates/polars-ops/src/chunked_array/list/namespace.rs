@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 use std::fmt::Write;
+use std::os::unix::raw::off_t;
 
 use polars_arrow::kernels::list::sublist_get;
 use polars_arrow::prelude::ValueSize;
@@ -70,6 +71,16 @@ fn cast_rhs(
             // else do nothing
         }
     }
+    Ok(())
+}
+
+fn check_slice_arg_shape(slice_len: usize, ca_len: usize, name: &str) -> PolarsResult<()> {
+    polars_ensure!(
+        slice_len == ca_len,
+        ComputeError:
+        "shape of the slice '{}' argument: {} does not match that of the list column: {}",
+        name, slice_len, ca_len
+    );
     Ok(())
 }
 
@@ -265,10 +276,69 @@ pub trait ListNameSpaceImpl: AsList {
         self.same_type(out)
     }
 
-    fn lst_slice(&self, offset: i64, length: usize) -> ListChunked {
+    fn lst_slice_literal(&self, offset: i64, length: usize) -> ListChunked {
         let ca = self.as_list();
         let out = ca.apply_amortized(|s| s.as_ref().slice(offset, length));
         self.same_type(out)
+    }
+
+    fn lst_slice(&self, offset_s: &Series, length_s: &Series) -> PolarsResult<ListChunked>{
+        let list_ca = self.as_list();
+        match (offset_s.len(), length_s.len()) {
+            (1, 1) => {
+                let offset = offset_s.get(0)?.try_extract::<i64>()?;
+                let slice_len = length_s
+                    .get(0)?
+                    .extract::<usize>()
+                    .unwrap_or(usize::MAX);
+                return Ok(Some(list_ca.lst_slice_literal(offset, slice_len)));
+            },
+            (1, length_slice_len) => {
+                check_slice_arg_shape(length_slice_len, list_ca.len(), "length")?;
+                let offset = offset_s.get(0)?.try_extract::<i64>()?;
+                // cast to i64 as it is more likely that it is that dtype
+                // instead of usize/u64 (we never need that max length)
+                let length_ca = length_s.cast(&DataType::Int64)?;
+                let length_ca = length_ca.i64()?;
+
+                list_ca.zip_amortized_generic(length_ca, |opt_s, opt_length| match (opt_s, opt_length) {
+                    (Some(s), Some(length)) => Some(s.as_ref().slice(offset, length as usize)),
+                    _ => None,
+                })
+            },
+            (offset_len, 1) => {
+                check_slice_arg_shape(offset_len, list_ca.len(), "offset")?;
+                let length_slice = length_s
+                    .get(0)?
+                    .extract::<usize>()
+                    .unwrap_or(usize::MAX);
+                let offset_ca = offset_s.cast(&DataType::Int64)?;
+                let offset_ca = offset_ca.i64()?;
+                list_ca.zip_amortized_generic(offset_ca, |opt_s, opt_offset|  match (opt_s, opt_offset) {
+                    (Some(s), Some(offset)) => Some(s.as_ref().slice(offset, length_slice)),
+                    _ => None,
+                })
+            },
+            _ => {
+                check_slice_arg_shape(offset_s.len(), list_ca.len(), "offset")?;
+                check_slice_arg_shape(length_s.len(), list_ca.len(), "length")?;
+                let offset_ca = offset_s.cast(&DataType::Int64)?;
+                let offset_ca = offset_ca.i64()?;
+                // cast to i64 as it is more likely that it is that dtype
+                // instead of usize/u64 (we never need that max length)
+                let length_ca = length_s.cast(&DataType::Int64)?;
+                let length_ca = length_ca.i64()?;
+
+                list_ca.binary_zip_amortized_generic(offset_ca, length_ca, |opt_s, opt_offset, opt_length| {
+                    match (opt_s, opt_offset, opt_length) {
+                        (Some(s), Some(offset), Some(length)) => {
+                            Some(s.as_ref().slice(offset, length as usize))
+                        },
+                        _ => None,
+                    }
+                })
+            },
+        };
     }
 
     fn lst_lengths(&self) -> IdxCa {

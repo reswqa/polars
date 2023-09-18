@@ -180,6 +180,35 @@ impl ListChunked {
         unsafe { self.amortized_iter().map(f).collect_ca(self.name()) }
     }
 
+    pub fn zip_amortized_generic<'a, T, U, V, F>(&'a self,
+                                                       other: &ChunkedArray<T>,f: F) -> ChunkedArray<V>
+            where T: PolarsDataType,
+            V: PolarsDataType,
+                  F: FnMut(Option<UnstableSeries<'a>>, Option<T::Physical<'a>>) -> Option<U>,
+                  V::Array: ArrayFromIter<Option<U>>,
+    {
+        // SAFETY: unstable series never lives longer than the iterator.
+        unsafe { self.amortized_iter().zip(other.into_iter()).map(|(opt_s, opt_other)| {
+            f(opt_s, opt_other)
+        }).collect_ca(self.name()) }
+    }
+
+    pub fn binary_zip_amortized_generic<'a, T, U, V,K, F>(&'a self,
+                                                 other1: &ChunkedArray<T>,
+                                                        other2: &ChunkedArray<U>,
+                                                        f: F) -> ChunkedArray<V>
+        where T: PolarsDataType,
+              U: PolarsDataType,
+        V: PolarsDataType,
+              F: FnMut(Option<UnstableSeries<'a>>, Option<T::Physical<'a>>, Option<U::Physical<'a>>) -> Option<K>,
+              V::Array: ArrayFromIter<Option<K>>,
+    {
+        // SAFETY: unstable series never lives longer than the iterator.
+        unsafe { self.amortized_iter().zip(other1).zip(other2).map(|((opt_s, opt_other1), opt_other2)|{
+            f(opt_s, opt_other1, opt_other2)
+        }).collect_ca(self.name()) }
+    }
+
     pub fn for_each_amortized<'a, F>(&'a self, f: F)
     where
         F: FnMut(Option<UnstableSeries<'a>>),
