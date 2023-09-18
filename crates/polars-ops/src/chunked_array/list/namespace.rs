@@ -291,7 +291,7 @@ pub trait ListNameSpaceImpl: AsList {
                     .get(0)?
                     .extract::<usize>()
                     .unwrap_or(usize::MAX);
-                return Ok(Some(list_ca.lst_slice_literal(offset, slice_len)));
+                Ok(list_ca.lst_slice_literal(offset, slice_len))
             },
             (1, length_slice_len) => {
                 check_slice_arg_shape(length_slice_len, list_ca.len(), "length")?;
@@ -301,10 +301,10 @@ pub trait ListNameSpaceImpl: AsList {
                 let length_ca = length_s.cast(&DataType::Int64)?;
                 let length_ca = length_ca.i64()?;
 
-                list_ca.zip_amortized_generic(length_ca, |opt_s, opt_length| match (opt_s, opt_length) {
+                Ok(list_ca.zip_amortized_generic(length_ca, |opt_s, opt_length| match (opt_s, opt_length) {
                     (Some(s), Some(length)) => Some(s.as_ref().slice(offset, length as usize)),
                     _ => None,
-                })
+                }))
             },
             (offset_len, 1) => {
                 check_slice_arg_shape(offset_len, list_ca.len(), "offset")?;
@@ -314,10 +314,10 @@ pub trait ListNameSpaceImpl: AsList {
                     .unwrap_or(usize::MAX);
                 let offset_ca = offset_s.cast(&DataType::Int64)?;
                 let offset_ca = offset_ca.i64()?;
-                list_ca.zip_amortized_generic(offset_ca, |opt_s, opt_offset|  match (opt_s, opt_offset) {
+                Ok(list_ca.zip_amortized_generic(offset_ca, |opt_s, opt_offset|  match (opt_s, opt_offset) {
                     (Some(s), Some(offset)) => Some(s.as_ref().slice(offset, length_slice)),
                     _ => None,
-                })
+                }))
             },
             _ => {
                 check_slice_arg_shape(offset_s.len(), list_ca.len(), "offset")?;
@@ -329,14 +329,14 @@ pub trait ListNameSpaceImpl: AsList {
                 let length_ca = length_s.cast(&DataType::Int64)?;
                 let length_ca = length_ca.i64()?;
 
-                list_ca.binary_zip_amortized_generic(offset_ca, length_ca, |opt_s, opt_offset, opt_length| {
+                Ok(list_ca.binary_zip_amortized_generic(offset_ca, length_ca, |opt_s, opt_offset, opt_length| {
                     match (opt_s, opt_offset, opt_length) {
                         (Some(s), Some(offset), Some(length)) => {
                             Some(s.as_ref().slice(offset, length as usize))
                         },
                         _ => None,
                     }
-                })
+                }))
             },
         };
     }
