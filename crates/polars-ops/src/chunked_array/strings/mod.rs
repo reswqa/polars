@@ -11,6 +11,7 @@ mod namespace;
 #[cfg(feature = "strings")]
 mod replace;
 mod split;
+mod strip;
 #[cfg(feature = "strings")]
 mod substring;
 
@@ -20,6 +21,7 @@ pub use json_path::*;
 pub use namespace::*;
 use polars_core::prelude::*;
 pub use split::*;
+pub use strip::*;
 
 pub trait AsUtf8 {
     fn as_utf8(&self) -> &Utf8Chunked;

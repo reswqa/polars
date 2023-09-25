@@ -7,6 +7,7 @@ use polars_arrow::utils::CustomIterTools;
 use regex::{escape, Regex};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use polars_core::prelude::arity::binary_elementwise;
 
 #[cfg(feature = "timezones")]
 static TZ_AWARE_RE: Lazy<Regex> =
@@ -298,67 +299,23 @@ pub(super) fn rjust(s: &Series, width: usize, fillchar: char) -> PolarsResult<Se
     Ok(ca.rjust(width, fillchar).into_series())
 }
 
-pub(super) fn strip_chars(s: &Series, matches: Option<&str>) -> PolarsResult<Series> {
-    let ca = s.utf8()?;
-    if let Some(matches) = matches {
-        if matches.chars().count() == 1 {
-            // Fast path for when a single character is passed
-            Ok(ca
-                .apply_values(|s| Cow::Borrowed(s.trim_matches(matches.chars().next().unwrap())))
-                .into_series())
-        } else {
-            Ok(ca
-                .apply_values(|s| Cow::Borrowed(s.trim_matches(|c| matches.contains(c))))
-                .into_series())
-        }
-    } else {
-        Ok(ca.apply_values(|s| Cow::Borrowed(s.trim())).into_series())
-    }
+
+pub(super) fn strip_chars(s: &[Series]) -> PolarsResult<Series> {
+    let ca = s[0].utf8()?;
+    let pat = s[1].utf8()?;
+    Ok(ca.strip_chars(pat).into_series())
 }
 
-pub(super) fn strip_chars_start(s: &Series, matches: Option<&str>) -> PolarsResult<Series> {
-    let ca = s.utf8()?;
-
-    if let Some(matches) = matches {
-        if matches.chars().count() == 1 {
-            // Fast path for when a single character is passed
-            Ok(ca
-                .apply_values(|s| {
-                    Cow::Borrowed(s.trim_start_matches(matches.chars().next().unwrap()))
-                })
-                .into_series())
-        } else {
-            Ok(ca
-                .apply_values(|s| Cow::Borrowed(s.trim_start_matches(|c| matches.contains(c))))
-                .into_series())
-        }
-    } else {
-        Ok(ca
-            .apply_values(|s| Cow::Borrowed(s.trim_start()))
-            .into_series())
-    }
+pub(super) fn strip_chars_start(s: &[Series]) -> PolarsResult<Series> {
+    let ca = s[0].utf8()?;
+    let pat = s[1].utf8()?;
+    Ok(ca.strip_chars_strat(pat).into_series())
 }
 
-pub(super) fn strip_chars_end(s: &Series, matches: Option<&str>) -> PolarsResult<Series> {
-    let ca = s.utf8()?;
-    if let Some(matches) = matches {
-        if matches.chars().count() == 1 {
-            // Fast path for when a single character is passed
-            Ok(ca
-                .apply_values(|s| {
-                    Cow::Borrowed(s.trim_end_matches(matches.chars().next().unwrap()))
-                })
-                .into_series())
-        } else {
-            Ok(ca
-                .apply_values(|s| Cow::Borrowed(s.trim_end_matches(|c| matches.contains(c))))
-                .into_series())
-        }
-    } else {
-        Ok(ca
-            .apply_values(|s| Cow::Borrowed(s.trim_end()))
-            .into_series())
-    }
+pub(super) fn strip_chars_end(s: &[Series]) -> PolarsResult<Series> {
+    let ca = s[0].utf8()?;
+    let pat = s[1].utf8()?;
+    Ok(ca.strip_chars_end(pat).into_series())
 }
 
 pub(super) fn strip_prefix(s: &[Series]) -> PolarsResult<Series> {

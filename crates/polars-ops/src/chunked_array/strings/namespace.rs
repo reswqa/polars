@@ -31,6 +31,20 @@ fn opt_strip_suffix<'a>(s: Option<&'a str>, suffix: Option<&str>) -> Option<&'a 
     Some(s?.strip_suffix(suffix?).unwrap_or(s?))
 }
 
+fn opt_strp_chars<'a>(opt_s: Option<&'a str>, opt_pat: Option<&str>) -> Option<&'a str>{
+    match (opt_s, opt_pat) {
+        (Some(s), Some(pat)) => {
+            if pat.chars().count() == 1{
+                Some(s.trim_matches(pat.chars().next().unwrap()))
+            }else{
+                Some(s.trim_matches(|c| pat.contains(c)))
+            }
+        },
+        (Some(s), _) => Some(s.trim()),
+        _=> None,
+    }
+}
+
 pub trait Utf8NameSpaceImpl: AsUtf8 {
     #[cfg(not(feature = "binary_encoding"))]
     fn hex_decode(&self) -> PolarsResult<Utf8Chunked> {
@@ -348,6 +362,20 @@ pub trait Utf8NameSpaceImpl: AsUtf8 {
             }
         }
         Ok(builder.finish())
+    }
+
+    fn strip_chars(&self, pat: &Utf8Chunked) -> Utf8Chunked{
+        let ca = self.as_utf8();
+        strip_chars(ca, pat)
+    }
+
+    fn strip_chars_strat(&self, pat: &Utf8Chunked) -> Utf8Chunked{
+        let ca = self.as_utf8();
+        strip_chars_start(ca, pat)
+    }
+    fn strip_chars_end(&self, pat: &Utf8Chunked) -> Utf8Chunked{
+        let ca = self.as_utf8();
+        strip_chars_end(ca, pat)
     }
 
     fn strip_prefix(&self, prefix: &Utf8Chunked) -> Utf8Chunked {
