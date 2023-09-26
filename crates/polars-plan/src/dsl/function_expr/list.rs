@@ -11,6 +11,8 @@ pub enum ListFunction {
     Contains,
     #[cfg(feature = "list_drop_nulls")]
     DropNulls,
+    #[cfg(feature = "diff")]
+    Diff(NullBehavior),
     Slice,
     Get,
     #[cfg(feature = "list_take")]
@@ -44,6 +46,8 @@ impl Display for ListFunction {
             Contains => "contains",
             #[cfg(feature = "list_drop_nulls")]
             DropNulls => "drop_nulls",
+            #[cfg(feature = "diff")]
+            Diff(_) => "diff",
             Slice => "slice",
             Get => "get",
             #[cfg(feature = "list_take")]
@@ -92,6 +96,13 @@ pub(super) fn drop_nulls(s: &Series) -> PolarsResult<Series> {
     let list = s.list()?;
 
     Ok(list.lst_drop_nulls().into_series())
+}
+
+pub(super) fn diff(s: &[Series], null_behavior: NullBehavior) -> PolarsResult<Series>{
+    let list = s[0].list()?;
+    let n_s =  &s[1].cast(&DataType::Int64)?;
+    let n = n_s.i64()?;
+    list.lst_diff(n, null_behavior)?;
 }
 
 fn check_slice_arg_shape(slice_len: usize, ca_len: usize, name: &str) -> PolarsResult<()> {

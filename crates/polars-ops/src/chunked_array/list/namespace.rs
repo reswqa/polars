@@ -254,8 +254,20 @@ pub trait ListNameSpaceImpl: AsList {
     }
 
     #[cfg(feature = "diff")]
-    fn lst_diff(&self, n: i64, null_behavior: NullBehavior) -> PolarsResult<ListChunked> {
+    fn lst_diff(&self, n: &Int64Chunked, null_behavior: NullBehavior) -> PolarsResult<ListChunked> {
         let ca = self.as_list();
+        let out = match n.len() {
+            1 => {
+                if let Some(n) = n.get(0){
+                    ca.try_apply_amortized(|s| s.as_ref().diff(n, null_behavior))
+                }else{
+                    ListChunked::full_null_with_dtype(ca.name(), ca.len(), ca.dtype())
+                }
+            },
+            _ => {
+
+            }
+        }
         ca.try_apply_amortized(|s| s.as_ref().diff(n, null_behavior))
     }
 

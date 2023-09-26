@@ -157,13 +157,14 @@ impl ListNameSpace {
 
     /// Diff every sublist.
     #[cfg(feature = "diff")]
-    pub fn diff(self, n: i64, null_behavior: NullBehavior) -> Expr {
+    pub fn diff(self, n: Expr, null_behavior: NullBehavior) -> Expr {
         self.0
-            .map(
-                move |s| Ok(Some(s.list()?.lst_diff(n, null_behavior)?.into_series())),
-                GetOutput::same_type(),
+            .map_many_private(
+                FunctionExpr::ListExpr(ListFunction::Diff(null_behavior)),
+                &[n],
+                false,
+                false
             )
-            .with_fmt("list.diff")
     }
 
     /// Shift every sublist.
