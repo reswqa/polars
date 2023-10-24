@@ -298,6 +298,28 @@ def test_shift_and_fill() -> None:
     assert out["a"].null_count() == 0
 
 
+def test_shift_and_fill_expr() -> None:
+    ldf = pl.LazyFrame({"a": [1, 2, 3, 4, 5], "b": [1, 2, 3, 4, 5]})
+
+    # use exprs
+    out = ldf.select(pl.col("a").shift(n=pl.col("b").min())).collect()
+    assert out.to_dict(False) == {"a": [None, 1, 2, 3, 4]}
+
+    out = ldf.select(
+        pl.col("a").shift_and_fill(pl.col("b").max(), n=pl.col("b").min())
+    ).collect()
+    assert out.to_dict(False) == {"a": [5, 1, 2, 3, 4]}
+
+    # use df method
+    out = ldf.shift(pl.lit(3)).collect()
+    assert out.to_dict(False) == {
+        "a": [None, None, None, 1, 2],
+        "b": [None, None, None, 1, 2],
+    }
+    out = ldf.shift_and_fill(pl.col("b").max(), n=pl.lit(2)).collect()
+    assert out.to_dict(False) == {"a": [5, 5, 1, 2, 3], "b": [5, 5, 1, 2, 3]}
+
+
 def test_arg_unique() -> None:
     ldf = pl.LazyFrame({"a": [4, 1, 4]})
     col_a_unique = ldf.select(pl.col("a").arg_unique()).collect()["a"]

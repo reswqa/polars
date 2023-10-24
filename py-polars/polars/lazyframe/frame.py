@@ -4230,7 +4230,7 @@ naive plan: (run LazyFrame.explain(optimized=True) to see the optimized plan)
         return self._from_pyldf(self._ldf.reverse())
 
     @deprecate_renamed_parameter("periods", "n", version="0.19.11")
-    def shift(self, n: int = 1) -> Self:
+    def shift(self, n: int | IntoExprColumn = 1) -> Self:
         """
         Shift values by the given number of places.
 
@@ -4271,6 +4271,7 @@ naive plan: (run LazyFrame.explain(optimized=True) to see the optimized plan)
         └──────┴──────┘
 
         """
+        n = parse_as_expression(n)
         return self._from_pyldf(self._ldf.shift(n))
 
     @deprecate_renamed_parameter("periods", "n", version="0.19.11")
@@ -4278,7 +4279,7 @@ naive plan: (run LazyFrame.explain(optimized=True) to see the optimized plan)
         self,
         fill_value: Expr | int | str | float,
         *,
-        n: int = 1,
+        n: int | IntoExprColumn = 1,
     ) -> Self:
         """
         Shift values by the given number of places and fill the resulting null values.
@@ -4324,6 +4325,7 @@ naive plan: (run LazyFrame.explain(optimized=True) to see the optimized plan)
         """
         if not isinstance(fill_value, pl.Expr):
             fill_value = F.lit(fill_value)
+        n = parse_as_expression(n)
         return self._from_pyldf(self._ldf.shift_and_fill(n, fill_value._pyexpr))
 
     def slice(self, offset: int, length: int | None = None) -> Self:

@@ -2400,7 +2400,7 @@ class Expr:
         return self._from_pyexpr(self._pyexpr.get(index_lit))
 
     @deprecate_renamed_parameter("periods", "n", version="0.19.11")
-    def shift(self, n: int = 1) -> Self:
+    def shift(self, n: int | IntoExprColumn = 1) -> Self:
         """
         Shift values by the given number of places.
 
@@ -2426,6 +2426,7 @@ class Expr:
         └─────┴─────────────┘
 
         """
+        n = parse_as_expression(n)
         return self._from_pyexpr(self._pyexpr.shift(n))
 
     @deprecate_renamed_parameter("periods", "n", version="0.19.11")
@@ -2433,7 +2434,7 @@ class Expr:
         self,
         fill_value: IntoExpr,
         *,
-        n: int = 1,
+        n: int | IntoExprColumn = 1,
     ) -> Self:
         """
         Shift values by the given number of places and fill the resulting null values.
@@ -2463,6 +2464,7 @@ class Expr:
 
         """
         fill_value = parse_as_expression(fill_value, str_as_lit=True)
+        n = parse_as_expression(n)
         return self._from_pyexpr(self._pyexpr.shift_and_fill(n, fill_value))
 
     def fill_null(
