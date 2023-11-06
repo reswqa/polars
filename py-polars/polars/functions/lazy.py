@@ -563,6 +563,38 @@ def last(column: str | Series | None = None) -> Expr:
     return F.col(column).last()
 
 
+def nth(n: int) -> Expr:
+    """
+    Get the n-th column of a context.
+
+    Examples
+    --------
+    >>> df = pl.DataFrame({"a": [1, 8, 3], "b": [4, 5, 2], "c": ["foo", "bar", "foo"]})
+    >>> df.select(pl.nth(2))
+    shape: (3, 1)
+    ┌─────┐
+    │ b   │
+    │ --- │
+    │ i64 │
+    ╞═════╡
+    │ 4   │
+    │ 5   │
+    │ 2   │
+    └─────┘
+    >>> df.select(pl.first("a"))
+    shape: (1, 1)
+    ┌─────┐
+    │ a   │
+    │ --- │
+    │ i64 │
+    ╞═════╡
+    │ 1   │
+    └─────┘
+
+    """
+    return wrap_expr(plr.nth(n))
+
+
 @overload
 def head(column: str, n: int = ...) -> Expr:
     ...

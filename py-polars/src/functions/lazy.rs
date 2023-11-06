@@ -341,6 +341,11 @@ pub fn first() -> PyExpr {
 }
 
 #[pyfunction]
+pub fn nth(n: i64) -> PyExpr {
+    dsl::nth(n).into()
+}
+
+#[pyfunction]
 pub fn fold(acc: PyExpr, lambda: PyObject, exprs: Vec<PyExpr>) -> PyExpr {
     let exprs = exprs.to_exprs();
 

@@ -1848,6 +1848,11 @@ pub fn first() -> Expr {
     Expr::Nth(0)
 }
 
+/// N-th column in DataFrame.
+pub fn nth(n: i64) -> Expr{
+    Expr::Nth(n)
+}
+
 /// Last column in DataFrame.
 pub fn last() -> Expr {
     Expr::Nth(-1)

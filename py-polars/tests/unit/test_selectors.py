@@ -500,3 +500,11 @@ def test_selector_or() -> None:
         {"rn": [0, 1, 2], "str": ["x", "y", "z"]}, schema_overrides={"rn": pl.UInt32}
     )
     assert_frame_equal(result, expected)
+
+
+def test_123() -> None:
+    df = pl.DataFrame({
+
+    })
+    out = df.select(pl.nth(0))
+    print(out)
