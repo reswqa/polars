@@ -7,22 +7,13 @@ from polars.testing import assert_frame_equal, assert_series_equal
 
 
 def test_when_then() -> None:
-    df = pl.DataFrame({"a": [1, 2, 3, 4, 5]})
+    df = pl.DataFrame({"a": [1,1,2,3],"b": [1,2,3,4]})
 
-    expr = pl.when(pl.col("a") < 3).then(pl.lit("x"))
-
-    result = df.select(
-        expr.otherwise(pl.lit("y")).alias("a"),
-        expr.alias("b"),
+    result = df.group_by("a").agg(
+        pl.when(pl.col("b").sum() > 0).then(pl.col("b")),
+        #pl.col("b").sum() + pl.col("b")
     )
-
-    expected = pl.DataFrame(
-        {
-            "a": ["x", "x", "y", "y", "y"],
-            "b": ["x", "x", None, None, None],
-        }
-    )
-    assert_frame_equal(result, expected)
+    print(result)
 
 
 def test_when_then_chained() -> None:

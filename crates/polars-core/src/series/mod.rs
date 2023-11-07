@@ -427,6 +427,8 @@ impl Series {
     #[cfg(feature = "zip_with")]
     pub fn zip_with(&self, mask: &BooleanChunked, other: &Series) -> PolarsResult<Series> {
         let (lhs, rhs) = coerce_lhs_rhs(self, other)?;
+        dbg!(lhs.dtype());
+        dbg!(rhs.dtype());
         lhs.zip_with_same_type(mask, rhs.as_ref())
     }
 

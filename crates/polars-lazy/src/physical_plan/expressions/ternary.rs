@@ -50,6 +50,21 @@ fn expand_lengths(truthy: &mut Series, falsy: &mut Series, mask: &mut BooleanChu
     }
 }
 
+fn expand_lengths_2(truthy: &mut Series, falsy: &mut Series, mask: &mut Series) {
+    let len = std::cmp::max(std::cmp::max(truthy.len(), falsy.len()), mask.len());
+    if len > 1 {
+        if falsy.len() == 1 {
+            *falsy = falsy.new_from_index(0, len);
+        }
+        if truthy.len() == 1 {
+            *truthy = truthy.new_from_index(0, len);
+        }
+        if mask.len() == 1 {
+            *mask = mask.new_from_index(0, len);
+        }
+    }
+}
+
 fn finish_as_iters<'a>(
     mut ac_truthy: AggregationContext<'a>,
     mut ac_falsy: AggregationContext<'a>,
@@ -164,6 +179,9 @@ impl PhysicalExpr for TernaryExpr {
 
         // BIG TODO: find which branches are never hit and remove them.
         use AggState::*;
+        dbg!(ac_truthy.agg_state());
+        dbg!(ac_falsy.agg_state());
+        dbg!(ac_mask.agg_state());
         match (ac_truthy.agg_state(), ac_falsy.agg_state()) {
             // All branches are aggregated-flat or literal
             // mask -> aggregated-flat
@@ -211,6 +229,7 @@ impl PhysicalExpr for TernaryExpr {
                 };
 
                 if ac_falsy.is_literal() && self.falsy.as_expression().map(has_null) == Some(true) {
+                    dbg!("aaa");
                     let s = ac_truthy.aggregated();
                     let ca = s.list().unwrap();
                     check_length(ca, mask)?;
@@ -225,6 +244,7 @@ impl PhysicalExpr for TernaryExpr {
                 } else if ac_truthy.is_literal()
                     && self.truthy.as_expression().map(has_null) == Some(true)
                 {
+                    dbg!("bbb");
                     let s = ac_falsy.aggregated();
                     let ca = s.list().unwrap();
                     check_length(ca, mask)?;
@@ -242,6 +262,7 @@ impl PhysicalExpr for TernaryExpr {
                 // Otherwise:
                 //     lit(list)
                 else if ac_truthy.is_literal() {
+                    dbg!("ccc");
                     let literal = ac_truthy.series();
                     let s = ac_falsy.aggregated();
                     let ca = s.list().unwrap();
@@ -255,6 +276,7 @@ impl PhysicalExpr for TernaryExpr {
                     ac_truthy.with_series(out.into_series(), true, Some(&self.expr))?;
                     Ok(ac_truthy)
                 } else {
+                    dbg!("ddd");
                     let literal = ac_falsy.series();
                     let s = ac_truthy.aggregated();
                     let ca = s.list().unwrap();
@@ -272,6 +294,7 @@ impl PhysicalExpr for TernaryExpr {
             // Both are or a flat series or aggregated into a list
             // so we can flatten the Series an apply the operators.
             _ => {
+                dbg!("eee");
                 // Inspect the predicate and if it is consisting
                 // of arity/binary and some aggregation we apply as iters as
                 // it gets complicated quickly.
@@ -294,6 +317,7 @@ impl PhysicalExpr for TernaryExpr {
                         }
                     }
                     if has_arity && has_agg {
+                        dbg!("has arity & agg");
                         return finish_as_iters(ac_truthy, ac_falsy, ac_mask);
                     }
                 }

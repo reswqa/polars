@@ -11,6 +11,12 @@ where
     Kernel: Fn(&PrimitiveArray<T::Native>, &PrimitiveArray<T::Native>) -> PrimitiveArray<T::Native>,
     F: Fn(T::Native, T::Native) -> T::Native,
 {
+    lhs.for_each(|l| {
+        dbg!(l);
+    });
+    rhs.for_each(|r| {
+        dbg!(r);
+    });
     let mut ca = match (lhs.len(), rhs.len()) {
         (a, b) if a == b => arity::binary(lhs, rhs, |lhs, rhs| kernel(lhs, rhs)),
         // broadcast right path

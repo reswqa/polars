@@ -72,12 +72,16 @@ fn zip_with<T: PolarsDataType>(
     mask: &BooleanChunked,
 ) -> PolarsResult<ChunkedArray<T>> {
     let (left, right, mask) = align_chunks_ternary(left, right, mask);
+    dbg!(left.dtype());
+    dbg!(right.dtype());
     let chunks = left
         .chunks()
         .iter()
         .zip(right.chunks())
         .zip(mask.downcast_iter())
         .map(|((left_c, right_c), mask_c)| {
+            dbg!(left_c.data_type());
+            dbg!(right_c.data_type());
             let mask_c = prepare_mask(mask_c);
             let arr = if_then_else(&mask_c, left_c.as_ref(), right_c.as_ref())?;
             Ok(arr)
