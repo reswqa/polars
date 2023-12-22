@@ -337,6 +337,7 @@ impl<T: PolarsDataType> ChunkedArray<T> {
         keep_sorted: bool,
         keep_fast_explode: bool,
     ) -> Self {
+        dbg!(self.field.clone());
         Self::from_chunks_and_metadata(
             chunks,
             self.field.clone(),

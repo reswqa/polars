@@ -30,11 +30,13 @@ impl Executor for FilterExec {
             }
         }
         let df = self.input.execute(state)?;
+        dbg!(&df);
 
         if self.has_window {
             state.insert_has_window_function_flag()
         }
         let s = self.predicate.evaluate(&df, state)?;
+        dbg!(s.n_chunks());
         if self.has_window {
             state.clear_window_expr_cache()
         }

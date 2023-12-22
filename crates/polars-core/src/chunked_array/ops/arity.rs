@@ -336,6 +336,8 @@ where
     F: FnMut(&T::Array, &U::Array) -> Box<dyn Array>,
 {
     let (lhs, rhs) = align_chunks_binary(lhs, rhs);
+    dbg!(lhs.chunks().len());
+    dbg!(rhs.chunks().len());
     let chunks = lhs
         .downcast_iter()
         .zip(rhs.downcast_iter())

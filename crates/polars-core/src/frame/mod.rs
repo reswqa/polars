@@ -1648,10 +1648,12 @@ impl DataFrame {
     /// ```
     pub fn filter(&self, mask: &BooleanChunked) -> PolarsResult<Self> {
         if std::env::var("POLARS_VERT_PAR").is_ok() {
+            dbg!("POLARS_VERT_PAR");
             return self.clone().filter_vertical(mask);
         }
         let new_col = self.try_apply_columns_par(&|s| match s.dtype() {
             DataType::Utf8 => {
+                dbg!("utf8");
                 let ca = s.utf8().unwrap();
                 if ca.get_values_size() / 24 <= ca.len() {
                     s.filter(mask)

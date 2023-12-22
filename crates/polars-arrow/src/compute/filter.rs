@@ -259,20 +259,25 @@ pub fn filter(array: &dyn Array, filter: &BooleanArray) -> PolarsResult<Box<dyn 
     let false_count = filter.values().unset_bits();
     if false_count == filter.len() {
         assert_eq!(array.len(), filter.len());
+        dbg!(array.data_type());
         return Ok(new_empty_array(array.data_type().clone()));
     }
     if false_count == 0 {
+        dbg!("to box");
         assert_eq!(array.len(), filter.len());
         return Ok(array.to_boxed());
     }
 
     use crate::datatypes::PhysicalType::*;
+    dbg!(array.data_type());
     match array.data_type().to_physical_type() {
         Primitive(primitive) => with_match_primitive_type_full!(primitive, |$T| {
+            dbg!("branch1");
             let array = array.as_any().downcast_ref().unwrap();
             Ok(Box::new(filter_primitive::<$T>(array, filter)))
         }),
         _ => {
+            dbg!("branch2");
             let iter = SlicesIterator::new(filter.values());
             let mut mutable = make_growable(&[array], false, iter.slots());
             iter.for_each(|(start, len)| mutable.extend(0, start, len));

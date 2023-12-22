@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 
 import pytest
@@ -167,3 +168,27 @@ def test_cast_list_to_array(data: Any, inner_type: pl.DataType) -> None:
     s = pl.Series(data, dtype=pl.List(inner_type))
     s = s.cast(pl.Array(inner_type, 2))
     assert s.to_list() == data
+
+
+def test_123() -> None:
+    data = {
+        'my_date': [
+            [datetime(year=2021,month=1,day=1),datetime(year=2021,month=1,day=1),datetime(year=2021,month=1,day=1)],
+            [datetime(year=2021,month=1,day=1),datetime(year=2021,month=1,day=1),datetime(year=2021,month=1,day=1)],
+            [datetime(year=2021,month=1,day=1),datetime(year=2021,month=1,day=1),datetime(year=2021,month=1,day=1)],
+                    ]
+    }
+
+    df = pl.DataFrame(data)
+    #print(df)
+    #print(df.select(pl.col("id") == pl.col('id').shift(1)))
+    # This changes data types for the `my_date` and `my_cat` columns
+    #s = df.select(pl.col("id") == pl.col('id').shift(1)).to_series()
+    #s = df.select(pl.col("id") == (pl.Series([1,1,2]).shift())).to_series()
+    #print(s.)
+    #s1 = pl.Series("id",[None,True], dtype=pl.Boolean)
+    # assert_series_equal(s, s1)
+    s = pl.Series([None,True,False])
+    #s = s.shift(1)
+    print(df)
+    print(df.lazy().filter(s.shift(1)).collect(no_optimization=True).dtypes)
