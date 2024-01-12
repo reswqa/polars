@@ -519,8 +519,13 @@ pub(crate) enum PolarsSQLFunctions {
     Explode,
     /// SQL 'array_to_string' function
     /// Takes all elements of the array and joins them into one string.
+    /// It will ignore null values by default.
     /// ```sql
     /// SELECT ARRAY_TO_STRING(column_1, ', ') from df;
+    /// ```
+    /// You can set the third argument(ignore_nulls) to false to propagate null values.
+    /// ```sql
+    /// SELECT ARRAY_TO_STRING(column_1, ', ', false) from df;
     /// ```
     ArrayToString,
     /// SQL 'array_get' function
@@ -969,9 +974,15 @@ impl SQLFunctionVisitor<'_> {
             ArrayMin => self.visit_unary(|e| e.list().min()),
             ArrayReverse => self.visit_unary(|e| e.list().reverse()),
             ArraySum => self.visit_unary(|e| e.list().sum()),
-            ArrayToString => self.try_visit_binary(|e, s| {
-                Ok(e.list().join(s))
-            }),
+            ArrayToString => match function.args.len(){
+                2 => self.try_visit_binary(|e, s| {
+                        Ok(e.list().join(s, true))
+                    }),
+                3 => self.try_visit_ternary(|e, s, ignore_nulls| {
+                    Ok(e.list().join(s, ignore_nulls))
+                }),
+                _ => polars_bail!(InvalidOperation: "Invalid number of arguments for ArrayToString: {}", function.args.len()),
+            }
             ArrayUnique => self.visit_unary(|e| e.list().unique()),
             Explode => self.visit_unary(|e| e.explode()),
             Udf(func_name) => self.visit_udf(&func_name)
@@ -1108,17 +1119,17 @@ impl SQLFunctionVisitor<'_> {
         f(&expr_args)
     }
 
-    fn try_visit_ternary<Arg: FromSQLExpr>(
+    fn try_visit_ternary<Arg1: FromSQLExpr, Arg2: FromSQLExpr>(
         &mut self,
-        f: impl Fn(Expr, Arg, Arg) -> PolarsResult<Expr>,
+        f: impl Fn(Expr, Arg1, Arg2) -> PolarsResult<Expr>,
     ) -> PolarsResult<Expr> {
         let args = extract_args(self.func);
         match args.as_slice() {
             [FunctionArgExpr::Expr(sql_expr1), FunctionArgExpr::Expr(sql_expr2), FunctionArgExpr::Expr(sql_expr3)] =>
             {
                 let expr1 = parse_sql_expr(sql_expr1, self.ctx)?;
-                let expr2 = Arg::from_sql_expr(sql_expr2, self.ctx)?;
-                let expr3 = Arg::from_sql_expr(sql_expr3, self.ctx)?;
+                let expr2 = Arg1::from_sql_expr(sql_expr2, self.ctx)?;
+                let expr3 = Arg2::from_sql_expr(sql_expr3, self.ctx)?;
                 f(expr1, expr2, expr3)
             },
             _ => self.not_supported_error(),
@@ -1233,6 +1244,21 @@ impl FromSQLExpr for f64 {
                 _ => polars_bail!(ComputeError: "can't parse literal {:?}", v),
             },
             _ => polars_bail!(ComputeError: "can't parse literal {:?}", expr),
+        }
+    }
+}
+
+impl FromSQLExpr for bool {
+    fn from_sql_expr(expr: &SQLExpr, _ctx: &mut SQLContext) -> PolarsResult<Self>
+    where
+        Self: Sized,
+    {
+        match expr {
+            SQLExpr::Value(v) => match v {
+                SQLValue::Boolean(v) => Ok(*v),
+                _ => polars_bail!(ComputeError: "can't parse boolean {:?}", v),
+            },
+            _ => polars_bail!(ComputeError: "can't parse boolean {:?}", expr),
         }
     }
 }
