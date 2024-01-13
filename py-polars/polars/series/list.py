@@ -397,7 +397,7 @@ class ListNameSpace:
             Ignore null values (default).
 
             If set to ``False``, null values will be propagated.
-            if the column contains any null values, the output is ``None``.
+            if the sub-list contains any null values, the output is ``None``.
 
         Returns
         -------
