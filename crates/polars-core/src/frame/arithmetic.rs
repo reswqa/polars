@@ -126,10 +126,10 @@ impl DataFrame {
                 let mut r = r.cast(&st)?;
 
                 if diff_l > 0 {
-                    l = l.extend_constant(AnyValue::Null, diff_l)?;
+                    l = l.extend_constant(l.get(0).unwrap_or(AnyValue::Null), diff_l)?;
                 };
                 if diff_r > 0 {
-                    r = r.extend_constant(AnyValue::Null, diff_r)?;
+                    r = r.extend_constant(r.get(0).unwrap_or(AnyValue::Null), diff_r)?;
                 };
 
                 f(&l, &r)
