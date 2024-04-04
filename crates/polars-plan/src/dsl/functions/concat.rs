@@ -16,7 +16,6 @@ pub fn concat_str<E: AsRef<[Expr]>>(s: E, separator: &str, ignore_nulls: bool) -
         options: FunctionOptions {
             collect_groups: ApplyOptions::ElementWise,
             input_wildcard_expansion: true,
-            returns_scalar: false,
             ..Default::default()
         },
     }
