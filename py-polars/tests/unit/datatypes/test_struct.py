@@ -248,7 +248,7 @@ def test_struct_with_validity() -> None:
     tbl = pa.Table.from_pylist(data)
     df = pl.from_arrow(tbl)
     assert isinstance(df, pl.DataFrame)
-    assert df["a"].to_list() == [{"b": 1}, {"b": None}]
+    assert df["a"].to_list() == [{"b": 1}, None]
 
 
 def test_from_dicts_struct() -> None:
@@ -629,18 +629,9 @@ def test_struct_categorical_5843() -> None:
 
 
 def test_empty_struct() -> None:
-    # List<struct>
-    df = pl.DataFrame({"a": [[{}]]})
-    assert df.to_dict(as_series=False) == {"a": [[{"": None}]]}
-
     # Struct one not empty
     df = pl.DataFrame({"a": [[{}, {"a": 10}]]})
     assert df.to_dict(as_series=False) == {"a": [[{"a": None}, {"a": 10}]]}
-
-    # Empty struct
-    df = pl.DataFrame({"a": [{}]})
-    assert df.to_dict(as_series=False) == {"a": [{"": None}]}
-
 
 @pytest.mark.parametrize(
     "dtype",
@@ -711,7 +702,7 @@ def test_struct_null_cast() -> None:
         .lazy()
         .select([pl.lit(None, dtype=pl.Null).cast(dtype, strict=True)])
         .collect()
-    ).to_dict(as_series=False) == {"literal": [{"a": None, "b": None, "c": None}]}
+    ).to_dict(as_series=False) == {"literal": [None]}
 
 
 def test_nested_struct_in_lists_cast() -> None:

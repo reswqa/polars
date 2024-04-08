@@ -1,6 +1,6 @@
 use pyo3::intern;
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyList, PyTuple};
+use pyo3::types::{PyBytes, PyList, PyNone, PyTuple};
 
 use super::{decimal_to_digits, struct_dict};
 use crate::prelude::*;
@@ -30,10 +30,15 @@ impl ToPyObject for Wrap<&StructChunked> {
         // make series::iter() accept a chunk index.
         let s = s.rechunk();
         let iter = s.iter().map(|av| {
-            if let AnyValue::Struct(_, _, flds) = av {
-                struct_dict(py, av._iter_struct_av(), flds)
-            } else {
-                unreachable!()
+            dbg!(&av);
+            match av{
+                AnyValue::Struct(_, _, flds) => {
+                    struct_dict(py, av._iter_struct_av(), flds)
+                },
+                AnyValue::Null => {
+                    PyNone::get(py).into_py(py)
+                },
+                _ => unreachable!()
             }
         });
 
