@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::io::Write;
 use std::ops::BitOr;
 
-use arrow::bitmap::MutableBitmap;
+use arrow::bitmap::{Bitmap, MutableBitmap};
 use arrow::legacy::trusted_len::TrustedLenPush;
 use arrow::offset::OffsetsBuffer;
 use smartstring::alias::String as SmartString;
@@ -39,7 +39,7 @@ fn arrays_to_fields(field_arrays: &[ArrayRef], fields: &[Series]) -> Vec<ArrowFi
         .collect()
 }
 
-fn fields_to_struct_array(fields: &[Series], physical: bool) -> (ArrayRef, Vec<Series>) {
+fn fields_to_struct_array(fields: &[Series], physical: bool) -> (ArrayRef, Vec<Series>, usize) {
     let fields = fields.iter().map(|s| s.rechunk()).collect::<Vec<_>>();
 
     let field_arrays = fields
@@ -62,8 +62,40 @@ fn fields_to_struct_array(fields: &[Series], physical: bool) -> (ArrayRef, Vec<S
     // we determine fields from arrays as there might be object arrays
     // where the dtype is bound to that single array
     let new_fields = arrays_to_fields(&field_arrays, &fields);
-    let arr = StructArray::new(ArrowDataType::Struct(new_fields), field_arrays, None);
-    (Box::new(arr), fields)
+    let (null_count, validity) = compute_null_count_and_validity(field_arrays.iter());
+    let arr = StructArray::new(ArrowDataType::Struct(new_fields), field_arrays, validity);
+    (Box::new(arr), fields, null_count)
+}
+
+fn compute_null_count_and_validity<'a>(fields: impl Iterator<Item=&'a ArrayRef>) ->(usize, Option<Bitmap>) {
+    // A row is null if all values in it are null, so we bitor every validity bitmask since a
+    // single valid entry makes that row not null. We can also save some work by not bothering
+    // to bitor fields that would have all 0 validities (Null dtype or everything null).
+        let mut validity_agg: Option<Bitmap> = None;
+        let mut n_nulls = None;
+        let mut len = 0;
+        for arr in fields {
+            len = arr.len();
+            if matches!(arr.data_type(), &ArrowDataType::Null) {
+                // The implicit validity mask is all 0 so it wouldn't affect the bitor
+                continue;
+            }
+            match (arr.validity(), n_nulls, arr.null_count() == 0) {
+                // The null count is to avoid touching chunks with a validity mask but no nulls
+                (_, Some(0), _) => break, // No all-null rows, next chunk!
+                (None, _, _) | (_, _, true) => n_nulls = Some(0),
+                (Some(v), _, _) => {
+                    validity_agg =
+                        validity_agg.map_or_else(|| Some(v.clone()), |agg| Some(v.bitor(&agg)));
+                    // n.b. This is "free" since any bitops trigger a count.
+                    n_nulls = validity_agg.as_ref().map(|v| v.unset_bits());
+                },
+            }
+        }
+        // If it's none, every array was either Null-type or all null
+        let null_count = n_nulls.unwrap_or(len);
+
+    (null_count, validity_agg)
 }
 
 impl StructChunked {
@@ -136,6 +168,18 @@ impl StructChunked {
         self.update_chunks(0);
     }
 
+    fn set_total_null_count(&mut self) -> bool{
+        // If there is at least one field with no null values, no rows are null. However, we still
+        // have to count the number of nulls per field to get the total number. Fortunately this is
+        // cheap since null counts per chunk are pre-computed.
+        let (could_have_null_rows, total_null_count) =
+            self.fields().iter().fold((true, 0), |acc, s| {
+                (acc.0 & (s.null_count() != 0), acc.1 + s.null_count())
+            });
+        self.total_null_count = total_null_count;
+        could_have_null_rows
+    }
+
     // Should be called after append or extend
     pub(crate) fn update_chunks(&mut self, offset: usize) {
         let n_chunks = self.fields[0].chunks().len();
@@ -153,10 +197,11 @@ impl StructChunked {
             // we determine fields from arrays as there might be object arrays
             // where the dtype is bound to that single array
             let new_fields = arrays_to_fields(&field_arrays, &self.fields);
+            let (_, validity) = compute_null_count_and_validity(field_arrays.iter());
             let arr = Box::new(StructArray::new(
                 ArrowDataType::Struct(new_fields),
                 field_arrays,
-                None,
+                validity,
             )) as ArrayRef;
             match self.chunks.get_mut(i) {
                 Some(a) => *a = arr,
@@ -178,7 +223,7 @@ impl StructChunked {
                 .collect(),
         );
         let field = Field::new(name, dtype);
-        let (arrow_array, fields) = fields_to_struct_array(fields, true);
+        let (arrow_array, fields, null_count) = fields_to_struct_array(fields, true);
 
         let mut out = Self {
             fields,
@@ -187,51 +232,22 @@ impl StructChunked {
             null_count: 0,
             total_null_count: 0,
         };
-        out.set_null_count();
+        out.set_total_null_count();
+        out.null_count = null_count;
         out
     }
 
     fn set_null_count(&mut self) {
-        // Count both the total number of nulls and the rows where everything is null
-        (self.null_count, self.total_null_count) = (0, 0);
-
-        // If there is at least one field with no null values, no rows are null. However, we still
-        // have to count the number of nulls per field to get the total number. Fortunately this is
-        // cheap since null counts per chunk are pre-computed.
-        let (could_have_null_rows, total_null_count) =
-            self.fields().iter().fold((true, 0), |acc, s| {
-                (acc.0 & (s.null_count() != 0), acc.1 + s.null_count())
-            });
-        self.total_null_count = total_null_count;
-        if !could_have_null_rows {
-            return;
+        if !self.set_total_null_count(){
+            return
         }
         // A row is null if all values in it are null, so we bitor every validity bitmask since a
         // single valid entry makes that row not null. We can also save some work by not bothering
         // to bitor fields that would have all 0 validities (Null dtype or everything null).
         for i in 0..self.fields()[0].chunks().len() {
-            let mut validity_agg: Option<arrow::bitmap::Bitmap> = None;
-            let mut n_nulls = None;
-            for s in self.fields() {
-                let arr = &s.chunks()[i];
-                if s.dtype() == &DataType::Null {
-                    // The implicit validity mask is all 0 so it wouldn't affect the bitor
-                    continue;
-                }
-                match (arr.validity(), n_nulls, arr.null_count() == 0) {
-                    // The null count is to avoid touching chunks with a validity mask but no nulls
-                    (_, Some(0), _) => break, // No all-null rows, next chunk!
-                    (None, _, _) | (_, _, true) => n_nulls = Some(0),
-                    (Some(v), _, _) => {
-                        validity_agg =
-                            validity_agg.map_or_else(|| Some(v.clone()), |agg| Some(v.bitor(&agg)));
-                        // n.b. This is "free" since any bitops trigger a count.
-                        n_nulls = validity_agg.as_ref().map(|v| v.unset_bits());
-                    },
-                }
-            }
-            // If it's none, every array was either Null-type or all null
-            self.null_count += n_nulls.unwrap_or(self.fields()[0].chunks()[i].len());
+            self.null_count += compute_null_count_and_validity(self.fields().iter().map(|s|{
+                &s.chunks()[i]
+            })).0;
         }
     }
 

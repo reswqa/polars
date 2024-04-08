@@ -70,3 +70,15 @@ def test_struct_name_resolving_15430() -> None:
     assert b["b"].item() == "c"
     assert a.columns == ["b"]
     assert b.columns == ["b"]
+
+
+def test2() -> None:
+    df1 = pl.DataFrame({"a": [1], "b": [[{"a": 1}]]})
+
+    oo = df1.lazy().with_columns(
+        pl.when((pl.col("b").is_not_null()) & (pl.col("b").list.len() > 0)).then(
+            pl.col("b").list.to_struct("max_width", lambda x: f"{x}", 1)
+        )
+    ).collect(type_coercion=True)
+
+    print(oo)
